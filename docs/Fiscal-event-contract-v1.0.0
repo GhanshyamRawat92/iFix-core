@@ -1,0 +1,295 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: eGov iFix fiscal event
+  description: |
+    APIs for fiscal events. This supports below features 
+    * Create new fiscal event in the system
+    * Search the existing fiscal event
+  contact:
+    name: Egovernments Foundation
+    email: contact@egovernments.org
+x-module: iFix Fiscal Event
+paths:
+  /fiscal/events/v1/_push:
+    post:
+      summary: Create(publish) new fiscal event on iFix
+      description: Create the new fiscal event
+      responses:
+        '202':
+          description: Event published successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/FiscalEventResponse'
+        '400':
+          description: Failed to process the request
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/GhanshyamRawat92/iFix-core/main/docs/common-contract-v1.0.0.yaml#/components/schemas/ErrorResponse'
+      tags:
+        - Fiscal Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FiscalEventRequest'
+        description: Details for the new fiscal event + RequestHeader (meta data of the API).
+        required: true
+        
+  /fiscal/events/v1/_search:
+    post:
+      summary: Get the list fiscal events.
+      description: |
+        Based on the criteria get the list of events.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/FiscalEventResponse'
+        '400':
+          description: Invalid input.
+          content:
+            '*/*':
+              schema:
+                $ref: 'https://raw.githubusercontent.com/GhanshyamRawat92/iFix-core/main/docs/common-contract-v1.0.0.yaml#/components/schemas/ErrorResponse'
+      tags:
+        - Fiscal Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FiscalEventGetRequest'
+        description: RequestHeader meta data.
+        required: true
+        
+servers:
+  - url: 'https://iFix.org'
+components:
+  schemas:
+  
+    FiscalEvent:
+      type: object
+      description: This object captures the fiscal information of external systems. 
+      properties:
+        id:
+          type: string
+          description: System generated UUID.
+          readOnly: true
+          minLength: 1
+          maxLength: 64
+        tenantId:
+          type: string
+          description: Tenant Id 
+          maxLength: 256
+          minLength: 2
+          nullable: false
+        eventType:
+          type: string
+          description: Captures the event type(eg- bill, receipt, expenditure)  
+          minLength: 1
+          maxLength: 64
+          nullable: false
+        demandNo:
+          type: string
+          description: Capture the the demand number, it is like an ID that helps in identification that which demand for grant is for which department
+          minLength: 1
+          maxLength: 64
+          nullable: false
+        transactionTime:
+          type: integer
+          format: int64
+          description: when the event occured at source system level
+        referenceId:
+          type: string
+          description: reference unique id(transaction id) of the caller system
+          minLength: 1
+          maxLength: 64
+        parentReferenceId:
+          type: string
+          description: System generated UUID.
+          minLength: 1
+          maxLength: 64 
+        parentEventId:
+          type: string
+          description: System generated UUID.
+          minLength: 1
+          maxLength: 64 
+        amountDetails:
+          type: array
+          items:
+            $ref: '#/components/schemas/Amount'
+        auditDetails:
+          $ref: 'https://raw.githubusercontent.com/GhanshyamRawat92/iFix-core/main/docs/common-contract-v1.0.0.yaml#/components/schemas/AuditDetails'
+        attributes:
+          type: object
+      
+      required:
+        - tenantId
+        - eventType
+        - transactionTime
+        - referenceId
+        - amountDetails
+      
+    Amount:
+      type: object
+      description: Capture the transaction amount and chart of account corresponding to the transaction amount
+      properties:
+        id:
+          type: string
+          description: System generated UUID
+          readOnly: true
+          minLength: 1
+          maxLength: 64
+        amount:
+          type: string
+          description: Transaction Amount 
+          minLength: 1
+          maxLength: 64
+        coa:
+          type: string
+          description: Chart of account for the tax head. This is the name spaced field to accommodate hierarchical structure of the COA(eg- majorhead.submajorhead.minorhead...) 
+          maxLength: 64
+          minLength: 1
+          readOnly: true
+        fromBillingPeriod:
+          type: integer
+          format: int64
+          description: Start date of the billing period for which transaction is applicable   
+        toBillingPeriod:
+          type: integer
+          format: int64
+          description: Start date of the billing period for which transaction is applicable 
+      required:
+        - amount
+        - coa
+        
+    Criteria:
+      type: object
+      description: The object contains all the search criteria of the fiscal
+       events
+      properties:
+        ids:
+          type: array
+          description: List of event ids
+          items:
+            type: string
+            maxItems: 100
+        tenantId:
+          type: string
+          description: Tenant Id 
+          maxLength: 256
+          minLength: 2
+          nullable: false
+        eventType:
+          type: string
+          description: Captures the event type(eg- bill, receipt, expenditure)  
+          minLength: 1
+          maxLength: 64
+          nullable: false
+        fromTransactionTime:
+          type: integer
+          format: int64
+          description: Search events b/w transaction time(Start date) 
+        toTransactionTime:
+          type: integer
+          format: int64
+          description: Search events b/w transaction time(End date) 
+        referenceId:
+          type: array
+          items:
+            type: string
+            maxItems: 100
+      required:
+        - tenantId
+        - eventType
+    
+    FiscalEventRequest:
+      description: Fiscal event request along with request metadata 
+      properties:
+        requestHeader:
+          $ref: 'https://raw.githubusercontent.com/GhanshyamRawat92/iFix-core/main/docs/common-contract-v1.0.0.yaml#/components/schemas/RequestHeader'
+        fiscalEvent:
+          $ref: '#/components/schemas/FiscalEvent'
+      required:
+        - requestHeader
+        - fiscalInfo
+    
+    FiscalEventGetRequest:
+      description: Fiscal event request along with request metadata 
+      properties:
+        requestHeader:
+          $ref: 'https://raw.githubusercontent.com/GhanshyamRawat92/iFix-core/main/docs/common-contract-v1.0.0.yaml#/components/schemas/RequestHeader'
+        criteria:
+          $ref: '#/components/schemas/Criteria'
+      required:
+        - requestHeader
+        - fiscalInfo
+          
+    FiscalEventResponse:
+      description: Contains the ResponseHeader and the enriched fiscal information
+      properties:
+        responseInfo:
+          $ref: 'https://raw.githubusercontent.com/GhanshyamRawat92/iFix-core/main/docs/common-contract-v1.0.0.yaml#/components/schemas/ResponseHeader'
+        fiscalEvent:
+          type: array
+          items:
+            $ref: '#/components/schemas/FiscalEvent'
+    
+    ChartOfAccount:
+      type: object
+      description: Captures the hierarchical COA data in recursively
+      properties:
+        headCodeCategory:
+          type: string
+          description: Capture the head code category 
+        headCode:
+          type: string
+          description: Capture the actual COA code for head code category
+          maxLength: 6
+        child:
+          description: Capture the child head code 
+          $ref: '#/components/schemas/ChartOfAccount'
+    
+    ChartOfAccount2:
+      type: object
+      description: Captures the COA data as map
+      properties:
+        majorHead:
+          type: string
+          description: Capture the major head code
+          minLength: 4
+          maxLength: 4
+          nullable: false
+        subMajorHead:
+          type: string
+          description: Capture the sub major head code
+          minLength: 2
+          maxLength: 2
+        minorHead:
+          type: string
+          description: Capture the minor head code
+          minLength: 3
+          maxLength: 3
+        subHead:
+          type: string
+          description: Capture the sub head code
+          minLength: 2
+          maxLength: 2
+        groupHead:
+          type: string
+          description: Capture the group head code
+          minLength: 2
+          maxLength: 2
+        objectHead:
+          type: string
+          description: Capture the object head code 
+          minLength: 2
+          maxLength: 2
+      required:
+        - majorHead
+        - subMajorHead
+        - minorHead
